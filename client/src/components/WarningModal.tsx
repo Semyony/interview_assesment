@@ -1,31 +1,31 @@
 import React, {useState} from 'react';
 import {useQuery, gql} from '@apollo/client';
 import {useSetRecoilState, useRecoilState} from 'recoil';
-import ChangeUserDropdown from './ChangeUserDropdown';
-import {currentUserState, nextUserState} from '../atoms/UserState';
+import WarningDropdown from './WarningDropdown';
+import {currentWarningState, nextWarningState} from '../atoms/WarningState';
 import {showDropdownState} from '../atoms/ChangeUserDropdownState';
-import {showUserModalState} from '../atoms/ChangeUserModalState';
-import {User, UserGQLResponse} from '../models/User';
+import {showWarningModalState} from '../atoms/WarningModalState';
+import {Warning, WarningGQLResponse} from '../models/Warning';
 import Logger from '../utils/Logger';
 import {GoChevronDown, GoChevronUp} from 'react-icons/go';
 import LoadingOverlay from './LoadingOverlay';
 import ErrorOverlay from './ErrorOverlay';
+import {warningState} from '../atoms/WarningState';
 
-interface UserManyData {
-  userMany: UserGQLResponse[];
+interface WarningManyData {
+  warningMany: WarningGQLResponse[];
 }
 
-interface UserManyVars {
+interface WarningManyVars {
   limit: number;
 }
 
-export const GET_USERS = gql`
-  query GetUser($limit: Int!) {
-    userMany(limit: $limit) {
+export const GET_WARNINGS = gql`
+  query GetWarning($limit: Int!) {
+    warningMany(limit: $limit) {
       _id
-      firstName
-      lastName
-      email
+      type
+      label
     }
   }
 `;
@@ -44,8 +44,8 @@ const styles: {[key: string]: React.CSSProperties} = {
     backdropFilter: 'blur(8px)',
   },
   modal: {
-    width: '500px',
-    height: '300px',
+    width: '600px',
+    height: '280px',
     borderRadius: '10px',
     backgroundColor: 'rgba(255, 255, 255, 1)',
     paddingLeft: '20px',
@@ -68,8 +68,8 @@ const styles: {[key: string]: React.CSSProperties} = {
     borderWidth: '1px',
     paddingLeft: '10px',
     paddingRight: '10px',
-    width: '450px',
-    height: '60px',
+    width: '550px',
+    height: '100px',
   },
   rotate180: {
     transform: 'rotate(180deg)',
@@ -78,7 +78,7 @@ const styles: {[key: string]: React.CSSProperties} = {
     display: 'flex',
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    width: '450px',
+    width: '550px',
     padding: '20px',
     fontWeight: 600,
   },
@@ -93,40 +93,44 @@ const styles: {[key: string]: React.CSSProperties} = {
     marginRight: '15px',
     cursor: 'default',
   },
-  changeUserButton: {
+  startWarningButton: {
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#ABEFEB',
+    backgroundColor: '#F47564',
     width: '140px',
     height: '50px',
     borderRadius: '5px',
     cursor: 'default',
+    color: '#FFFFFF',
   },
-  changeUserButtonDisabled: {
+  endWarningButton: {
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#ABEFEB',
-    opacity: 0.5,
     width: '140px',
     height: '50px',
     borderRadius: '5px',
+    marginRight: '15px',
     cursor: 'default',
   },
 };
 
-const ChangeUserModal = () => {
-  const {loading, error, data} = useQuery<UserManyData, UserManyVars>(
-    GET_USERS,
-    {variables: {limit: 100}}
+const WarningModal = () => {
+  const {loading, error, data} = useQuery<WarningManyData, WarningManyVars>(
+    GET_WARNINGS,
+    {variables: {limit: 3}}
   );
-  const setShowModal = useSetRecoilState(showUserModalState);
+  const setShowModal = useSetRecoilState(showWarningModalState);
   const [showDropdown, setShowDropdown] = useRecoilState(showDropdownState);
-  const [currentUser, setCurrentUser] = useRecoilState(currentUserState);
-  const [nextUser, setNextUser] = useRecoilState(nextUserState);
+  const [currentWarning, setCurrentWarning] =
+    useRecoilState(currentWarningState);
+  const setShowWarning = useSetRecoilState(warningState);
+  const [nextWarning, setNextWarning] = useRecoilState(nextWarningState);
   const [cancelButtonOpacity, setCancelButtonOpacity] = useState(1.0);
-  const [changeUserButtonOpacity, setChangeUserButtonOpacity] = useState(1.0);
+  const [changeEndButtonOpacity, setChangeEndButtonOpacity] = useState(1.0);
+  const [changeStartButtonOpacity, setChangeStartButtonOpacity] = useState(1.0);
   const [iconColor, setIconColor] = useState('#414141');
   const ChevronIcon = showDropdown ? GoChevronUp : GoChevronDown;
 
@@ -136,13 +140,12 @@ const ChangeUserModal = () => {
   const onExitModal = () => {
     setShowModal(false);
     setShowDropdown(false);
-    setNextUser(null);
   };
 
   return (
     <div
       style={styles.root}
-      data-testid="change_user_modal"
+      data-testid="change_warning_modal"
       onClick={onExitModal}
     >
       <div
@@ -152,23 +155,16 @@ const ChangeUserModal = () => {
           setShowDropdown(false);
         }}
       >
-        <h1>
-          {currentUser
-            ? `Logged in as ${currentUser.firstName} ${currentUser.lastName}`
-            : 'Not Logged In'}
-        </h1>
-        <h4>Change User</h4>
+        <h1>Admin Console</h1>
+        <h4>Start a Site Wide Warning</h4>
         <div
           style={styles.dropdownButton}
-          data-testid="dropdown"
           onClick={event => {
             event.stopPropagation();
             setShowDropdown(!showDropdown);
           }}
         >
-          <div>
-            {nextUser?.firstName} {nextUser?.lastName}
-          </div>
+          <div>{nextWarning?.type} </div>
           <ChevronIcon
             size={30}
             color={iconColor}
@@ -181,17 +177,17 @@ const ChangeUserModal = () => {
           />
         </div>
         {showDropdown ? (
-          <ChangeUserDropdown
-            users={
+          <WarningDropdown
+            warnings={
               data
-                ? data.userMany.map(({_id, firstName, lastName, email}) => {
-                    return {id: _id, firstName, lastName, email} as User;
+                ? data.warningMany.map(({_id, type, label}) => {
+                    return {id: _id, type, label} as Warning;
                   })
                 : []
             }
-            onSelect={user => {
+            onSelect={warning => {
               setShowDropdown(!showDropdown);
-              setNextUser(user);
+              setNextWarning(warning);
             }}
           />
         ) : null}
@@ -204,33 +200,72 @@ const ChangeUserModal = () => {
           >
             Cancel
           </div>
+          {currentWarning !== null && (
+            <div
+              style={{
+                ...styles.endWarningButton,
+                opacity:
+                  nextWarning?.type !== currentWarning?.type ||
+                  nextWarning === null
+                    ? 0.5
+                    : changeEndButtonOpacity,
+              }}
+              onMouseEnter={() =>
+                currentWarning?.type === nextWarning?.type &&
+                setChangeEndButtonOpacity(0.8)
+              }
+              onMouseLeave={() =>
+                currentWarning?.type === nextWarning?.type &&
+                setChangeEndButtonOpacity(1.0)
+              }
+              onClick={event => {
+                event.stopPropagation();
+                if (
+                  currentWarning !== null &&
+                  nextWarning?.type === currentWarning?.type
+                ) {
+                  setShowModal(false);
+                  setShowWarning(false);
+                  setCurrentWarning(null);
+                  Logger.info(nextWarning?.type + ' is stopped');
+                  onExitModal();
+                }
+              }}
+            >
+              End Warning
+            </div>
+          )}
+
           <div
             style={{
-              ...styles.changeUserButton,
-              opacity: nextUser === null ? 0.5 : changeUserButtonOpacity,
+              ...styles.startWarningButton,
+              opacity:
+                nextWarning?.type === currentWarning?.type ||
+                nextWarning === null
+                  ? 0.5
+                  : changeStartButtonOpacity,
             }}
             onMouseEnter={() =>
-              nextUser !== null && setChangeUserButtonOpacity(0.8)
+              null !== currentWarning && setChangeStartButtonOpacity(0.8)
             }
             onMouseLeave={() =>
-              nextUser !== null && setChangeUserButtonOpacity(1.0)
+              null !== currentWarning && setChangeStartButtonOpacity(1.0)
             }
             onClick={event => {
               event.stopPropagation();
-              if (nextUser !== null) {
+              if (
+                nextWarning !== null &&
+                nextWarning?.type !== currentWarning?.type
+              ) {
                 setShowModal(false);
-                setCurrentUser(nextUser);
-                Logger.info(
-                  'Switched user to ' +
-                    nextUser?.firstName +
-                    ' ' +
-                    nextUser?.lastName
-                );
+                setShowWarning(true);
+                setCurrentWarning(nextWarning);
+                Logger.info('New ' + nextWarning?.type + ' is started');
                 onExitModal();
               }
             }}
           >
-            Change User
+            Start Warning
           </div>
         </div>
       </div>
@@ -238,4 +273,4 @@ const ChangeUserModal = () => {
   );
 };
 
-export default ChangeUserModal;
+export default WarningModal;

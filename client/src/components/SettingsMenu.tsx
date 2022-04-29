@@ -1,8 +1,12 @@
 import React, {useState} from 'react';
 import {useSetRecoilState} from 'recoil';
 
-import {showModalState} from '../atoms/ChangeUserModalState';
+import {showUserModalState} from '../atoms/ChangeUserModalState';
+import {showWarningModalState} from '../atoms/WarningModalState';
+
 import {showSettingsMenuState} from '../atoms/SettingsMenuState';
+import {warningState} from '../atoms/WarningState';
+import {useRecoilValue} from 'recoil';
 
 const styles: {[key: string]: React.CSSProperties} = {
   overlay: {
@@ -17,7 +21,6 @@ const styles: {[key: string]: React.CSSProperties} = {
     flexDirection: 'column',
     position: 'absolute',
     left: 'calc(100vw - 220px)',
-    top: '90px',
     width: '180px',
     justifyContent: 'flex-start',
     alignItems: 'stretch',
@@ -40,6 +43,7 @@ const styles: {[key: string]: React.CSSProperties} = {
 const SettingsMenuItemType = Object.freeze({
   SETTINGS: 'SETTINGS',
   HELP: 'HELP',
+  ADMIN_CONSOLE: 'ADMIN_CONSOLE',
   CHANGE_USER: 'CHANGE_USER',
 });
 
@@ -55,6 +59,12 @@ const SettingsMenuItemConfigs = [
     onClick: () => {},
   },
   {
+    type: SettingsMenuItemType.ADMIN_CONSOLE,
+    label: 'Admin Console',
+    onClick: (setShowWarningModal: (value: boolean) => void) =>
+      setShowWarningModal(true),
+  },
+  {
     type: SettingsMenuItemType.CHANGE_USER,
     label: 'Change User',
     onClick: (setShowChangeUserModal: (value: boolean) => void) =>
@@ -63,14 +73,19 @@ const SettingsMenuItemConfigs = [
 ];
 
 const SettingsMenu = () => {
-  const setShowChangeUserModal = useSetRecoilState(showModalState);
+  const setShowChangeUserModal = useSetRecoilState(showUserModalState);
+  const setShowWarningModal = useSetRecoilState(showWarningModalState);
   const setShowSettingsMenu = useSetRecoilState(showSettingsMenuState);
   const [hoveredMenuItemKey, setHoveredMenuItemKey] = useState<number | null>(
     null
   );
+  const showWarning = useRecoilValue(warningState);
 
   return (
-    <div style={styles.overlay} onClick={() => setShowSettingsMenu(false)}>
+    <div
+      style={{...styles.overlay, top: showWarning ? '150px' : '90px'}}
+      onClick={() => setShowSettingsMenu(false)}
+    >
       <div style={styles.menu}>
         {SettingsMenuItemConfigs.map((menuItem, idx) => (
           <div
@@ -82,7 +97,14 @@ const SettingsMenu = () => {
             }}
             onClick={() => {
               setShowSettingsMenu(false);
-              menuItem.onClick(setShowChangeUserModal);
+              {
+                menuItem.type === SettingsMenuItemType.ADMIN_CONSOLE &&
+                  menuItem.onClick(setShowWarningModal);
+              }
+              {
+                menuItem.type === SettingsMenuItemType.CHANGE_USER &&
+                  menuItem.onClick(setShowChangeUserModal);
+              }
             }}
             onMouseEnter={() => setHoveredMenuItemKey(idx)}
             onMouseLeave={() => setHoveredMenuItemKey(null)}

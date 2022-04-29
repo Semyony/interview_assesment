@@ -44,6 +44,7 @@ const ChangeUserDropdown = (props: DropdownProps) => {
         props.users.map((user: User) => {
           return (
             <div
+              data-testid="dropdownElem"
               key={user.id}
               style={{
                 ...styles.menuItem,

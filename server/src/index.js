@@ -32,9 +32,11 @@ server.applyMiddleware({
       } else {
         reject(new Error('Could not connect to MongoDB server'));
       }
+    
     }),
 });
 
 app.listen({port: process.env.PORT}, () => {
   console.log(`🚀 Server listening on port ${process.env.PORT}`);
+  
 });
